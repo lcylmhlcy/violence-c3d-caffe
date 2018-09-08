@@ -1,0 +1,332 @@
+name: "violence_c3d"
+
+# ---------------------------------------------------------------------------- video/label input -----
+
+# ------------------------------------------------------------------------------------ for training
+
+layer {
+  name: "data"
+  type: "VideoData"
+  top: "data"
+  top: "label"
+  video_data_param {
+    source: "./examples/violence_c3d/c3d_train.txt"
+    batch_size: 20
+    new_height: 60
+    new_width: 90
+    new_length: 40
+    shuffle: true
+  }
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    mirror: true
+  }
+}
+
+# --------------------------------------------------------------------------------------- for validation
+
+layer {
+  name: "data"
+  type: "VideoData"
+  top: "data"
+  top: "label"
+  video_data_param {
+    source: "./examples/violence_c3d/c3d_train.txt"
+    batch_size: 20
+    new_height: 60
+    new_width: 90
+    new_length: 40
+    shuffle: true
+  }
+  include {
+    phase: TEST
+    stage: "test-on-train"
+  }
+  transform_param {
+    mirror: false
+  }
+}
+
+layer {
+  name: "data"
+  type: "VideoData"
+  top: "data"
+  top: "label"
+  video_data_param {
+    source: "./examples/violence_c3d/c3d_test.txt"
+    batch_size: 20
+    new_height: 60
+    new_width: 90
+    new_length: 40
+    shuffle: true
+  }
+  include {
+    phase: TEST
+    stage: "test-on-val"
+  }
+  transform_param {
+    mirror: false
+  }
+} 
+
+# ---------------------------------------------------------------------------------------------------------------- 1st group -----
+layer {
+  name: "conv1a"
+  type: "NdConvolution"
+  bottom: "data"
+  top: "conv1a"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 7
+    kernel_shape { dim: 5 dim: 7 dim: 7 }
+    stride_shape { dim: 1 dim: 1 dim: 1 }
+    #pad_shape    { dim: 1 dim: 1 dim: 1 }
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "sigmoid1a"
+  type: "Sigmoid"
+  bottom: "conv1a"
+  top: "conv1a"
+}
+
+layer {
+  name: "pool1"
+  type: "NdPooling"
+  bottom: "conv1a"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_shape { dim: 1 dim: 3 dim: 3 }
+    stride_shape { dim: 1 dim: 3 dim: 3 }
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------- 2nd group -----
+layer {
+  name: "conv2a"
+  type: "NdConvolution"
+  bottom: "pool1"
+  top: "conv2a"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 35
+    kernel_shape { dim: 5 dim: 5 dim: 5 }
+    stride_shape { dim: 1 dim: 1 dim: 1 }
+    #pad_shape    { dim: 1 dim: 1 dim: 1 }
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+
+layer {
+  name: "sigmoid2a"
+  type: "Sigmoid"
+  bottom: "conv2a"
+  top: "conv2a"
+}
+
+layer {
+  name: "pool2"
+  type: "NdPooling"
+  bottom: "conv2a"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_shape { dim: 1 dim: 2 dim: 2 }
+    stride_shape { dim: 1 dim: 2 dim: 2 }
+  }
+}
+
+# ------------------------------------------------------------------------------------------------------------ 3rd group -----
+layer {
+  name: "conv3a"
+  type: "NdConvolution"
+  bottom: "pool2"
+  top: "conv3a"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 5
+    kernel_shape { dim: 3 dim: 3 dim: 3 }
+    stride_shape { dim: 1 dim: 1 dim: 1 }
+    #pad_shape    { dim: 1 dim: 1 dim: 1 }
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+
+layer {
+  name: "sigmoid3a"
+  type: "ReLU"
+  bottom: "conv3a"
+  top: "conv3a"
+}
+
+# ------------------------------------------------------------------------------------------------------- 1nd fc group -----
+layer {
+  name: "fc512"
+  type: "InnerProduct"
+  bottom: "conv3a"
+  top: "fc512"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 512
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+
+layer {
+  name: "relu512"
+  type: "ReLU"
+  bottom: "fc512"
+  top: "fc512"
+}
+
+# ---------------------------------------------------------------------------------------------- 2rd fc group -----
+layer {
+  name: "fc100"
+  type: "InnerProduct"
+  bottom: "fc512"
+  top: "fc100"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "relu100"
+  type: "ReLU"
+  bottom: "fc100"
+  top: "fc100"
+}
+
+# ---------------------------------------------------------------------------------------------- 3rd fc group -----
+layer {
+  name: "fc2"
+  type: "InnerProduct"
+  bottom: "fc100"
+  top: "fc2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 2
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+#----------------------------------------------------------------------------------------accuracy/loss------------------------
+layer {
+  name: "prob"
+  type: "Softmax"
+  bottom: "fc2"
+  top: "prob"
+  include {
+    phase: TEST
+  }
+}
+
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "prob"
+  bottom: "label"
+  top: "accuracy"
+  include {
+    phase: TEST
+  }
+}
+
+layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "fc2"
+  bottom: "label"
+  top: "loss"
+}
